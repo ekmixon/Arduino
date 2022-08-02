@@ -13,8 +13,8 @@ import tempfile
 sys.argv.pop(0) # Remove executable name
 toolspath = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/') # CWD in UNIX format
 try:
-    sys.path.insert(0, toolspath + "/pyserial") # Add pyserial dir to search path
-    sys.path.insert(0, toolspath + "/esptool") # Add esptool dir to search path
+    sys.path.insert(0, f"{toolspath}/pyserial")
+    sys.path.insert(0, f"{toolspath}/esptool")
     import esptool # If this fails, we can't continue and will bomb below
 except Exception:
     sys.stderr.write("pyserial or esptool directories not found next to this upload.py tool.\n")

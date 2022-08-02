@@ -11,7 +11,7 @@ def http_test(res, url, get=None, post=None):
     response = ''
     try:
         if get:
-            url += '?' + urllib.parse.urlencode(get)
+            url += f'?{urllib.parse.urlencode(get)}'
         if post:
             post = bytes(urllib.parse.urlencode(post).encode('utf-8'))
         request = urllib.request.urlopen(url, post, 2)
@@ -19,9 +19,7 @@ def http_test(res, url, get=None, post=None):
     except Exception as e:
         print('http_test: Exception: ', e, file=sys.stderr)
         return 1
-    if response != res:
-        return 1
-    return 0
+    return 1 if response != res else 0
 
 @setup('HTTP GET Parameters')
 def setup_http_get_params(e):

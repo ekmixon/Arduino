@@ -29,7 +29,7 @@ def setup_echo_server(e):
             if len(data) != 1024:
                 raise RuntimeError('client failed to receive response')
             count += 1
-        
+
     stop_client_thread = False
     client_thread = Thread(target=echo_client_thread)
     client_thread.start()

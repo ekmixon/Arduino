@@ -83,7 +83,7 @@ def patch_etree_cname(etree):
                 ['{}={}'.format(k, quoteattr(v))
                  for k, v in sorted(elem.attrib.items())]
             )
-            attrs = ' ' + attrs if attrs else ''
+            attrs = f' {attrs}' if attrs else ''
             text = CNAME_PATTERN.format(elem.text)
             write(TAG_PATTERN.format(
                 tag=elem.tag,
@@ -109,7 +109,7 @@ def merge_trees(*trees):
     first_tree = trees[0]
     first_root = first_tree.getroot()
 
-    if len(trees) == 0:
+    if not trees:
         return first_tree
 
     for tree in trees[1:]:
@@ -138,10 +138,7 @@ def merge_xunit(files, output, callback=None):
     the merged file). This can either modify the element tree in place (and
     return None) or return a completely new ElementTree to be written.
     """
-    trees = []
-
-    for f in files:
-        trees.append(etree.parse(f))
+    trees = [etree.parse(f) for f in files]
 
     merged = merge_trees(*trees)
 

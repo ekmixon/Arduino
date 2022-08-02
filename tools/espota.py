@@ -47,7 +47,7 @@ PROGRESS = False
 ## A value under 0 represents a 'halt'.
 ## A value at 1 or bigger represents 100%
 def update_progress(progress):
-  if (PROGRESS):
+  if PROGRESS:
     barLength = 60 # Modify this to change the length of the progress bar
     status = ""
     if isinstance(progress, int):
@@ -64,10 +64,10 @@ def update_progress(progress):
     block = int(round(barLength*progress))
     text = "\rUploading: [{0}] {1}% {2}".format( "="*block + " "*(barLength-block), int(progress*100), status)
     sys.stderr.write(text)
-    sys.stderr.flush()
   else:
     sys.stderr.write('.')
-    sys.stderr.flush()
+
+  sys.stderr.flush()
 
 def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, command = FLASH):
   # Create a TCP/IP socket
@@ -82,17 +82,17 @@ def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, comm
     return 1
 
   # Check whether Signed Update is used.
-  if ( os.path.isfile(filename + '.signed') ):
-    filename = filename + '.signed'
-    file_check_msg = 'Detected Signed Update. %s will be uploaded instead.' % (filename)
+  if os.path.isfile(f'{filename}.signed'):
+    filename = f'{filename}.signed'
+    file_check_msg = (
+        f'Detected Signed Update. {filename} will be uploaded instead.')
     sys.stderr.write(file_check_msg + '\n')
     sys.stderr.flush()
     logging.info(file_check_msg)
-  
+
   content_size = os.path.getsize(filename)
-  f = open(filename,'rb')
-  file_md5 = hashlib.md5(f.read()).hexdigest()
-  f.close()
+  with open(filename,'rb') as f:
+    file_md5 = hashlib.md5(f.read()).hexdigest()
   logging.info('Upload size: %d', content_size)
   message = '%d %d %d %s\n' % (command, localPort, content_size, file_md5)
 
@@ -109,12 +109,12 @@ def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, comm
     sock2.close()
     return 1
   if (data != "OK"):
-    if(data.startswith('AUTH')):
+    if (data.startswith('AUTH')):
       nonce = data.split()[1]
       cnonce_text = '%s%u%s%s' % (filename, content_size, file_md5, remoteAddr)
       cnonce = hashlib.md5(cnonce_text.encode()).hexdigest()
       passmd5 = hashlib.md5(password.encode()).hexdigest()
-      result_text = '%s:%s:%s' % (passmd5 ,nonce, cnonce)
+      result_text = f'{passmd5}:{nonce}:{cnonce}'
       result = hashlib.md5(result_text.encode()).hexdigest()
       sys.stderr.write('Authenticating...')
       sys.stderr.flush()
@@ -190,7 +190,7 @@ def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, comm
       connection.settimeout(60)
       received_ok = False
       received_error = False
-      while not (received_ok or received_error):
+      while not received_ok and not received_error:
         reply = connection.recv(64).decode()
         # Look for either the "E" in ERROR or the "O" in OK response
         # Check for "E" first, since both strings contain "O"
@@ -204,9 +204,7 @@ def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, comm
       connection.close()
       f.close()
       sock.close()
-      if received_ok:
-        return 0
-      return 1
+      return 0 if received_ok else 1
     except Exception:
       logging.error('No Result!')
       connection.close()
@@ -309,10 +307,7 @@ def main(args):
   # get options
   options = parser(args)
 
-  # adapt log level
-  loglevel = logging.WARNING
-  if (options.debug):
-    loglevel = logging.DEBUG
+  loglevel = logging.DEBUG if options.debug else logging.WARNING
   # end if
 
   # logging

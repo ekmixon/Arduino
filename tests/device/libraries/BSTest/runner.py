@@ -82,7 +82,7 @@ class BSTestRunner(object):
             elif res >= 2:
                 time.sleep(0.1)
 
-        debug_print('got {} tests'.format(len(self.tests)))
+        debug_print(f'got {len(self.tests)} tests')
 
     def run_tests(self):
         test_cases = []
@@ -93,12 +93,12 @@ class BSTestRunner(object):
             index = test['id']
             test_case = TestCase(name, self.name)
             if '[.]' in desc:
-                print('skipping test "{}"'.format(name))
+                print(f'skipping test "{name}"')
                 test_case.add_skipped_info(message="Skipped test marked with [.]")
             else:
                 test_output = StringIO()
                 self.sp.logfile = test_output
-                print('running test "{}"'.format(name))
+                print(f'running test "{name}"')
                 if should_update_env:
                     res = self.update_env(self.env_vars)
                     if res != BSTestRunner.SUCCESS:
@@ -132,9 +132,9 @@ class BSTestRunner(object):
                 debug_print(test_output.getvalue())
                 if result == BSTestRunner.SUCCESS:
                     test_case.stdout = filter(lambda c: ord(c) < 128, test_output.getvalue())
-                    print('test "{}" passed'.format(name))
+                    print(f'test "{name}" passed')
                 else:
-                    print('test "{}" failed'.format(name))
+                    print(f'test "{name}" failed')
                     test_case.add_failure_info('Test failed', output=test_output.getvalue())
                     should_update_env = True
                 test_output.close()
@@ -142,7 +142,7 @@ class BSTestRunner(object):
         return TestSuite(self.name, test_cases)
 
     def run_test(self, index):
-        self.sp.sendline('{}'.format(index))
+        self.sp.sendline(f'{index}')
         timeout = 20 # 10
         while timeout > 0:
             res = self.sp.expect(['>>>>>bs_test_start', EOF, TIMEOUT])
@@ -166,18 +166,17 @@ class BSTestRunner(object):
                 test_result = self.sp.match.group(2)
                 if test_result == '1':
                     return BSTestRunner.SUCCESS
-                else:
-                    if self.sp.match.group(1) != '0':
-                        time.sleep(1.0)
-                        self.sp.expect([TIMEOUT,
-                                        'wdt reset',
-                                        'Exception',
-                                        'Panic',
-                                        'Abort',
-                                        'Soft WDT',
-                                        EOF], timeout=self.reset_timeout)
-                    return BSTestRunner.FAIL
-            elif res == 2 or res == 3:
+                if self.sp.match.group(1) != '0':
+                    time.sleep(1.0)
+                    self.sp.expect([TIMEOUT,
+                                    'wdt reset',
+                                    'Exception',
+                                    'Panic',
+                                    'Abort',
+                                    'Soft WDT',
+                                    EOF], timeout=self.reset_timeout)
+                return BSTestRunner.FAIL
+            elif res in [2, 3]:
                 time.sleep(0.1)
                 timeout -= 0.1
                 continue
@@ -188,7 +187,7 @@ class BSTestRunner(object):
 
     def update_env(self, env_to_set):
         for env_kv in env_to_set:
-            self.sp.sendline('setenv "{}" "{}"'.format(env_kv[0], env_kv[1]))
+            self.sp.sendline(f'setenv "{env_kv[0]}" "{env_kv[1]}"')
             timeout = 10
             while timeout > 0:
                 res = self.sp.expect(['>>>>>bs_test_setenv', EOF, TIMEOUT])
@@ -212,13 +211,10 @@ class BSTestRunner(object):
                 break
             time.sleep(0.1)
             timeout -= 0.1
-        if res != 0:
-            return BSTestRunner.TIMEOUT
-        else:
-            return BSTestRunner.SUCCESS
+        return BSTestRunner.TIMEOUT if res != 0 else BSTestRunner.SUCCESS
 
     def request_env(self, key):
-        self.sp.sendline('getenv "{}"'.format(key))
+        self.sp.sendline(f'getenv "{key}"')
         timeout = 10
         while timeout > 0:
             res = self.sp.expect([r'>>>>>bs_test_getenv value=\"(.+)\"', EOF, TIMEOUT])
@@ -226,9 +222,7 @@ class BSTestRunner(object):
                 break
             time.sleep(0.1)
             timeout -= 0.1
-        if res != 0:
-            return None
-        return self.sp.match.group(1)
+        return None if res != 0 else self.sp.match.group(1)
 
 
 ser = None

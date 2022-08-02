@@ -41,7 +41,7 @@ def setup_tcpsrv(e):
             if readable:
                 connection, client_address = sock.accept()
                 try:
-                    print('client connected: %s' % str(client_address), file=sys.stderr)
+                    print(f'client connected: {str(client_address)}', file=sys.stderr)
                 finally:
                     print ('close', file=sys.stderr)
                     connection.shutdown(socket.SHUT_RDWR)

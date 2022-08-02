@@ -63,7 +63,7 @@ def unpack(filename, destination):
         raise NotImplementedError('Unsupported archive type')
 
     # a little trick to rename tool directories so they don't contain version number
-    rename_to = re.match(r'^([a-zA-Z_][^\-]*\-*)+', dirname).group(0).strip('-')
+    rename_to = re.match(r'^([a-zA-Z_][^\-]*\-*)+', dirname)[0].strip('-')
     if rename_to != dirname:
         print('Renaming {0} to {1}'.format(dirname, rename_to))
         if os.path.isdir(rename_to):
@@ -76,7 +76,7 @@ def get_tool(tool):
     url = tool['url']
     real_hash = tool['checksum'].split(':')[1]
     if not os.path.isfile(local_path):
-        print('Downloading ' + archive_name);
+        print(f'Downloading {archive_name}');
         urlretrieve(url, local_path, report_progress)
         sys.stdout.write("\rDone\n")
         sys.stdout.flush()
@@ -92,10 +92,8 @@ def load_tools_list(filename, platform):
     tools_info = json.load(open(filename))['packages'][0]['tools']
     tools_to_download = []
     for t in tools_info:
-        tool_platform = [p for p in t['systems'] if p['host'] == platform]
-        if len(tool_platform) == 0:
-            continue
-        tools_to_download.append(tool_platform[0])
+        if tool_platform := [p for p in t['systems'] if p['host'] == platform]:
+            tools_to_download.append(tool_platform[0])
     return tools_to_download
 
 def identify_platform():
@@ -103,9 +101,7 @@ def identify_platform():
                               'Linux'   : {32 : 'i686-pc-linux-gnu',   64 : 'x86_64-pc-linux-gnu'},
                               'LinuxARM': {32 : 'arm-linux-gnueabihf', 64 : 'aarch64-linux-gnu'},
                               'Windows' : {32 : 'i686-mingw32',        64 : 'x86_64-mingw32'}}
-    bits = 32
-    if sys.maxsize > 2**32:
-        bits = 64
+    bits = 64 if sys.maxsize > 2**32 else 32
     sys_name = platform.system()
     if 'Linux' in sys_name and (platform.platform().find('arm') > 0 or platform.platform().find('aarch64') > 0):
         sys_name = 'LinuxARM'
@@ -120,9 +116,8 @@ def identify_platform():
 def main():
     global verbose
     # Support optional "-q" quiet mode simply
-    if len(sys.argv) == 2:
-        if sys.argv[1] == "-q":
-            verbose = False
+    if len(sys.argv) == 2 and sys.argv[1] == "-q":
+        verbose = False
     # Remove a symlink generated in 2.6.3 which causes later issues since the tarball can't properly overwrite it
     if (os.path.exists('python3/python3')):
         os.unlink('python3/python3')

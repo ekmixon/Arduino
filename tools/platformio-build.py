@@ -50,14 +50,10 @@ env = DefaultEnvironment()
 platform = env.PioPlatform()
 board = env.BoardConfig()
 gzip_fw = board.get("build.gzip_fw", False)
-gzip_switch = []
-
 FRAMEWORK_DIR = platform.get_package_dir("framework-arduinoespressif8266")
 assert isdir(FRAMEWORK_DIR)
 
-if gzip_fw:
-    gzip_switch = ["--gzip", "PIO"]
-
+gzip_switch = ["--gzip", "PIO"] if gzip_fw else []
 env.Append(
     ASFLAGS=["-x", "assembler-with-cpp"],
 
@@ -324,11 +320,11 @@ elif "PIO_FRAMEWORK_ARDUINO_MMU_EXTERNAL_1024K" in flatten_cppdefines:
         ("MMU_EXTERNAL_HEAP", "256"),
     ]
 elif "PIO_FRAMEWORK_ARDUINO_MMU_CUSTOM" in flatten_cppdefines:
-    if not all(d in flatten_cppdefines for d in required_flags):
+    if any(d not in flatten_cppdefines for d in required_flags):
         print(
-            "Error: Missing custom MMU configuration flags (%s)!"
-            % ", ".join(required_flags)
+            f'Error: Missing custom MMU configuration flags ({", ".join(required_flags)})!'
         )
+
         env.Exit(1)
 
     for flag in env["CPPDEFINES"]:
@@ -337,7 +333,6 @@ elif "PIO_FRAMEWORK_ARDUINO_MMU_CUSTOM" in flatten_cppdefines:
             define, _ = flag
         if define.startswith("MMU_"):
             mmu_flags.append(flag)
-# PIO_FRAMEWORK_ARDUINO_MMU_CACHE32_IRAM32 (default)
 else:
     mmu_flags = [
         ("MMU_IRAM_SIZE", board.get("build.mmu_iram_size", "0x8000")),
@@ -367,21 +362,25 @@ app_ld = env.Command(
     join("$BUILD_DIR", "ld", "local.eagle.app.v6.common.ld"),
     join(FRAMEWORK_DIR, "tools", "sdk", "ld", "eagle.app.v6.common.ld.h"),
     env.VerboseAction(
-        "$CC -CC -E -P -D%s %s %s $SOURCE -o $TARGET"
-        % (
-            current_vtables,
-            # String representation of MMU flags
-            " ".join(
-                [
-                    "-D%s=%s" % f if isinstance(f, (tuple, list)) else "-D" + f
-                    for f in mmu_flags
-                ]
-            ),
-            fp_in_irom,
+        (
+            "$CC -CC -E -P -D%s %s %s $SOURCE -o $TARGET"
+            % (
+                current_vtables,
+                " ".join(
+                    [
+                        "-D%s=%s" % f
+                        if isinstance(f, (tuple, list))
+                        else f"-D{f}"
+                        for f in mmu_flags
+                    ]
+                ),
+                fp_in_irom,
+            )
         ),
         "Generating LD script $TARGET",
     ),
 )
+
 env.Depends("$BUILD_DIR/$PROGNAME$PROGSUFFIX", app_ld)
 
 if not env.BoardConfig().get("build.ldscript", ""):

@@ -25,13 +25,18 @@ def sign_and_write(data, priv_key, out_file):
     proc = subprocess.Popen(signcmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     signout, signerr = proc.communicate(input=data)
     if proc.returncode:
-        sys.stderr.write("OpenSSL returned an error signing the binary: " + str(proc.returncode) + "\nSTDERR: " + str(signerr))
+        sys.stderr.write(
+            f"OpenSSL returned an error signing the binary: {str(proc.returncode)}"
+            + "\nSTDERR: "
+            + str(signerr)
+        )
+
     else:
         with open(out_file, "wb") as out:
             out.write(data)
             out.write(signout)
             out.write(b'\x00\x01\x00\x00')
-            sys.stderr.write("Signed binary: " + out_file + "\n")
+            sys.stderr.write(f"Signed binary: {out_file}" + "\n")
 
 def sign_and_write_legacy(data, priv_key, out_file):
     """Signs the data (bytes) with the private key (file path)."""
@@ -42,13 +47,18 @@ def sign_and_write_legacy(data, priv_key, out_file):
     proc = subprocess.Popen(signcmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     signout, signerr = proc.communicate(input=sha256.digest())
     if proc.returncode:
-        sys.stderr.write("OpenSSL returned an error legacy signing the binary: " + str(proc.returncode) + "\nSTDERR: " + str(signerr))
+        sys.stderr.write(
+            f"OpenSSL returned an error legacy signing the binary: {str(proc.returncode)}"
+            + "\nSTDERR: "
+            + str(signerr)
+        )
+
     else:
         with open(out_file, "wb") as out:
             out.write(data)
             out.write(signout)
             out.write(b'\x00\x01\x00\x00')
-            sys.stderr.write("Legacy signed binary: " + out_file + "\n")
+            sys.stderr.write(f"Legacy signed binary: {out_file}" + "\n")
 
 def main():
     args = parse_args()

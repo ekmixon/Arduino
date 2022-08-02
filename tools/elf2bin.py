@@ -34,7 +34,12 @@ crcsize_offset = 4096 + 16
 crcval_offset =  4096 + 16 + 4
 
 def get_elf_entry(elf, path):
-    p = subprocess.Popen([path + "/xtensa-lx106-elf-readelf", '-h', elf], stdout=subprocess.PIPE, universal_newlines=True )
+    p = subprocess.Popen(
+        [f"{path}/xtensa-lx106-elf-readelf", '-h', elf],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
     lines = p.stdout.readlines()
     for line in lines:
         if 'Entry point address' in line:
@@ -44,7 +49,12 @@ def get_elf_entry(elf, path):
     raise Exception('Unable to find entry point in file "' + elf + '"')
 
 def get_segment_size_addr(elf, segment, path):
-    p = subprocess.Popen([path + '/xtensa-lx106-elf-objdump', '-h', '-j', segment,  elf], stdout=subprocess.PIPE, universal_newlines=True )
+    p = subprocess.Popen(
+        [f'{path}/xtensa-lx106-elf-objdump', '-h', '-j', segment, elf],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
     lines = p.stdout.readlines()
     for line in lines:
         if segment in line:
@@ -57,7 +67,18 @@ def get_segment_size_addr(elf, segment, path):
 def read_segment(elf, segment, path):
     fd, tmpfile = tempfile.mkstemp()
     os.close(fd)
-    subprocess.check_call([path + "/xtensa-lx106-elf-objcopy", '-O', 'binary', '--only-section=' + segment, elf, tmpfile], stdout=subprocess.PIPE)
+    subprocess.check_call(
+        [
+            f"{path}/xtensa-lx106-elf-objcopy",
+            '-O',
+            'binary',
+            f'--only-section={segment}',
+            elf,
+            tmpfile,
+        ],
+        stdout=subprocess.PIPE,
+    )
+
     with open(tmpfile, "rb") as f:
         raw = f.read()
     os.remove(tmpfile)
@@ -95,7 +116,10 @@ def write_bin(out, args, elf, segments, to_addr):
     out.write(bytearray([checksum]))
     if to_addr != 0:
         if total_size + 8 > to_addr:
-            raise Exception('Bin image of ' + elf + ' is too big, actual size ' + str(total_size  + 8) + ', target size ' + str(to_addr) + '.')
+            raise Exception(
+                f'Bin image of {elf} is too big, actual size {str(total_size  + 8)}, target size {str(to_addr)}.'
+            )
+
         while total_size < to_addr:
             out.write(bytearray([0xaa]))
             total_size += 1
@@ -103,17 +127,12 @@ def write_bin(out, args, elf, segments, to_addr):
 def crc8266(ldata):
     "Return the CRC of ldata using same algorithm as eboot"
     crc = 0xffffffff
-    idx = 0
-    while idx < len(ldata):
+    for idx in range(len(ldata)):
         byte = int(ldata[idx])
-        idx = idx + 1
         for i in [0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]:
             bit = crc & 0x80000000
             if (byte & i) != 0:
-                if bit == 0:
-                    bit = 1
-                else:
-                    bit = 0
+                bit = 1 if bit == 0 else 0
             crc = int(crc << 1) & 0xffffffff
             if bit != 0:
                 crc = int(crc ^ 0x04c11db7)
@@ -145,11 +164,11 @@ def gzip_bin(mode, out):
     import gzip
 
     firmware_path = out
-    gzip_path = firmware_path + '.gz'
-    orig_path = firmware_path + '.orig'
+    gzip_path = f'{firmware_path}.gz'
+    orig_path = f'{firmware_path}.orig'
     if os.path.exists(gzip_path):
         os.remove(gzip_path)
-    print('GZipping firmware ' + firmware_path)
+    print(f'GZipping firmware {firmware_path}')
     with open(firmware_path, 'rb') as firmware_file, \
             gzip.open(gzip_path, 'wb') as dest:
         data = firmware_file.read()
@@ -162,7 +181,7 @@ def gzip_bin(mode, out):
     if mode == "PIO":
         if os.path.exists(orig_path):
             os.remove(orig_path)
-        print('Moving original firmware to ' + orig_path)
+        print(f'Moving original firmware to {orig_path}')
         os.rename(firmware_path, orig_path)
         os.rename(gzip_path, firmware_path)
 

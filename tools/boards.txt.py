@@ -1301,27 +1301,25 @@ def comb (m, lst):
     if m == 0: return [[]]
     return [[x] + suffix for i, x in enumerate(lst) for suffix in comb(m - 1, lst[i + 1:])]
 
-def combn (lst):
+def combn(lst):
     all = []
-    for i in range(0, len(lst)):
+    for i in range(len(lst)):
         all += comb(i + 1, lst)
     return all
 
-def comb1 (lst, lstplusone):
-    all = []
-    for i in range(0, len(lst)):
-        all += [ [ lst[i] ] ]
+def comb1(lst, lstplusone):
+    all = [[ lst[i] ] for i in range(len(lst))]
     if len(lstplusone):
-        for i in range(0, len(lstplusone)):
+        for i in range(len(lstplusone)):
             all += [ [ lstplusone[i] ] ]
         all += [ lst ]
-        for i in range(0, len(lstplusone)):
+        for i in range(len(lstplusone)):
             all += [ lst + [ lstplusone[i] ] ]
     else:
         all += [ lst ]
     return all
 
-def all_debug ():
+def all_debug():
     listcomb = [ 'SSL', 'TLS_MEM', 'HTTP_CLIENT', 'HTTP_SERVER' ]
     listnocomb = [ 'CORE', 'WIFI', 'HTTP_UPDATE', 'UPDATER', 'OTA', 'OOM', 'MDNS' ]
     listplusone = [ 'HWDT', 'HWDT_NOEXTRA4K' ]
@@ -1329,8 +1327,8 @@ def all_debug ():
     options = combn(listcomb)
     options += comb1(listnocomb, listplusone)
     options += [ listcomb + listnocomb ]
-    for i in range(0, len(listplusone)):
-        options += [ listcomb + listnocomb + [ listplusone[i] ] ]
+    for item in listplusone:
+        options += [listcomb + listnocomb + [item]]
     options += [ listsingle ]
     debugmenu = collections.OrderedDict([
             ( '.menu.dbg.Disabled', 'Disabled' ),
@@ -1349,34 +1347,27 @@ def all_debug ():
         debugdefs = ''
         for opt in optlist:
             space = opt.find(" ")
-            if space > 0:
-                # remove subsequent associated gcc cmdline option
-                simpleopt = opt[0:space]
-            else:
-                simpleopt = opt
+            simpleopt = opt[:space] if space > 0 else opt
             debugname += simpleopt
             if debugmenuname != '':
                 debugmenuname += '+'
             debugmenuname += simpleopt
-            if opt == 'NoAssert-NDEBUG':
-                debugdefs += ' -DNDEBUG'
-            else:
-                debugdefs += ' -DDEBUG_ESP_' + opt
-        debugmenu.update(collections.OrderedDict([
-            ( '.menu.lvl.' + debugname, debugmenuname ),
-            ( '.menu.lvl.' + debugname + '.build.debug_level', debugdefs )
-            ]))
+            debugdefs += ' -DNDEBUG' if opt == 'NoAssert-NDEBUG' else f' -DDEBUG_ESP_{opt}'
+        debugmenu.update(
+            collections.OrderedDict(
+                [
+                    (f'.menu.lvl.{debugname}', debugmenuname),
+                    (f'.menu.lvl.{debugname}.build.debug_level', debugdefs),
+                ]
+            )
+        )
+
     return { 'debug_menu': debugmenu }
 
 ################################################################
 # flash size
 
-def flash_map (flashsize_kb, fs_kb = 0):
-
-    # mapping:
-    # flash | reserved | empty | spiffs | eeprom | rf-cal | sdk-wifi-settings
-
-    spi = 0x40200000 # https://github.com/esp8266/esp8266-wiki/wiki/Memory-Map
+def flash_map(flashsize_kb, fs_kb = 0):
 
     reserved = 4112
     eeprom_size_kb = 4
@@ -1396,45 +1387,65 @@ def flash_map (flashsize_kb, fs_kb = 0):
         max_upload_size = 1024 * 1024 - reserved
         fs_start = (flashsize_kb - fs_kb) * 1024
 
-    if fs_kb < 512:
-        fs_blocksize = 4096
-    else:
-        fs_blocksize = 8192
-
+    fs_blocksize = 4096 if fs_kb < 512 else 8192
     # Adjust FS_end to be a multiple of the block size
     fs_end = fs_blocksize * (int)((fs_end - fs_start)/fs_blocksize) + fs_start;
 
     max_ota_size = min(max_upload_size, fs_start / 2) # =(max_upload_size+empty_size)/2
-    strsize = str(int(flashsize_kb / 1024)) + 'M' if (flashsize_kb >= 1024) else str(flashsize_kb) + 'K'
-    strfs = str(int(fs_kb / 1024)) + 'M' if (fs_kb >= 1024) else str(fs_kb) + 'K'
-    strfs_strip = str(int(fs_kb / 1024)) + 'M' if (fs_kb >= 1024) else str(fs_kb) if (fs_kb > 0) else ''
+    strsize = (
+        f'{int(flashsize_kb / 1024)}M'
+        if flashsize_kb >= 1024
+        else f'{str(flashsize_kb)}K'
+    )
 
-    ld = 'eagle.flash.' + strsize.lower() + strfs_strip.lower() + '.ld'
-    menu = '.menu.eesz.' + strsize + strfs_strip
-    menub = menu + '.build.'
-    desc = 'none' if (fs_kb == 0) else strfs + 'B'
-    d = collections.OrderedDict([
-        ( menu, strsize + 'B (FS:' + desc + ' OTA:~%iKB)' % (max_ota_size / 1024)),
-        ( menub + 'flash_size', strsize ),
-        ( menub + 'flash_size_bytes', "0x%X" % (flashsize_kb * 1024)),
-        ( menub + 'flash_ld', ld ),
-        ( menub + 'spiffs_pagesize', '256' ),
-        ( menu + '.upload.maximum_size', "%i" % max_upload_size ),
-        ( menub + 'rfcal_addr', "0x%X" % rfcal_addr)
-        ])
+    strfs = f'{int(fs_kb / 1024)}M' if fs_kb >= 1024 else f'{str(fs_kb)}K'
+    strfs_strip = (
+        f'{int(fs_kb / 1024)}M'
+        if fs_kb >= 1024
+        else str(fs_kb)
+        if (fs_kb > 0)
+        else ''
+    )
+
+
+    ld = f'eagle.flash.{strsize.lower()}{strfs_strip.lower()}.ld'
+    menu = f'.menu.eesz.{strsize}{strfs_strip}'
+    menub = f'{menu}.build.'
+    desc = 'none' if fs_kb == 0 else f'{strfs}B'
+    d = collections.OrderedDict(
+        [
+            (
+                menu,
+                f'{strsize}B (FS:{desc}'
+                + ' OTA:~%iKB)' % (max_ota_size / 1024),
+            ),
+            (f'{menub}flash_size', strsize),
+            (f'{menub}flash_size_bytes', "0x%X" % (flashsize_kb * 1024)),
+            (f'{menub}flash_ld', ld),
+            (f'{menub}spiffs_pagesize', '256'),
+            (f'{menu}.upload.maximum_size', "%i" % max_upload_size),
+            (f'{menub}rfcal_addr', "0x%X" % rfcal_addr),
+        ]
+    )
+
     if fs_kb > 0:
-        d.update(collections.OrderedDict([
-            ( menub + 'spiffs_start', "0x%05X" % fs_start ),
-            ( menub + 'spiffs_end', "0x%05X" % fs_end ),
-            ( menub + 'spiffs_blocksize', "%i" % fs_blocksize ),
-            ]))
+        d.update(
+            collections.OrderedDict(
+                [
+                    (f'{menub}spiffs_start', "0x%05X" % fs_start),
+                    (f'{menub}spiffs_end', "0x%05X" % fs_end),
+                    (f'{menub}spiffs_blocksize', "%i" % fs_blocksize),
+                ]
+            )
+        )
+
 
     if ldshow:
         if ldgen:
 
             checkdir()
 
-            ldbackupdir = lddir + "backup/"
+            ldbackupdir = f"{lddir}backup/"
             if not os.path.isdir(ldbackupdir):
                 os.mkdir(ldbackupdir)
             if os.path.isfile(lddir + ld) and not os.path.isfile(ldbackupdir + ld):
@@ -1449,7 +1460,12 @@ def flash_map (flashsize_kb, fs_kb = 0):
         else:
             page = 0x100
 
-        print("/* Flash Split for %s chips */" % strsize)
+        print(f"/* Flash Split for {strsize} chips */")
+        # mapping:
+        # flash | reserved | empty | spiffs | eeprom | rf-cal | sdk-wifi-settings
+
+        spi = 0x40200000 # https://github.com/esp8266/esp8266-wiki/wiki/Memory-Map
+
         print("/* sketch @0x%X (~%dKB) (%dB) */" % (spi, (max_upload_size / 1024), max_upload_size))
         empty_size = fs_start - max_upload_size
         if empty_size > 0:
@@ -1488,7 +1504,7 @@ def flash_map (flashsize_kb, fs_kb = 0):
 
     return d
 
-def all_flash_map ():
+def all_flash_map():
 
     f512 = collections.OrderedDict([])
     f1m  = collections.OrderedDict([])
@@ -1532,7 +1548,7 @@ def all_flash_map ():
     f512.update(flash_map(     512))
 
     if ldgen:
-        print("generated: ldscripts (in %s)" % lddir)
+        print(f"generated: ldscripts (in {lddir})")
 
     return {
         '512K': f512,

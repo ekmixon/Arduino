@@ -21,5 +21,5 @@ gh = Github(login_or_token=args.token)
 repo = gh.get_repo(str(args.repo))
 release = repo.create_git_release(args.tag, args.name, args.msg, draft=True)
 for fn in args.files:
-    print("Uploading file: " + fn)
+    print(f"Uploading file: {fn}")
     release.upload_asset(fn)

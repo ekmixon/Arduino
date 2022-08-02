@@ -14,35 +14,45 @@ def setup_http_get(e):
         if func is None:
             raise RuntimeError('Not running with the Werkzeug Server')
         func()
+
     @app.route('/shutdown')
     def shutdown():
         shutdown_server()
         return 'Server shutting down...'
+
     @app.route("/", methods = ['GET', 'POST'])
     def root():
-        print('Got data: ' + request.data.decode());
+        print(f'Got data: {request.data.decode()}');
         return 'hello!!!'
+
     @app.route("/data")
     def get_data():
         size = int(request.args['size'])
         return 'a'*size
+
     @app.route("/target")
     def target():
         return "redirect success"
+
     @app.route("/redirect301")
     def redirect301():
         return redirect("http://{}:8088/target".format(request.args['host']), code=301)
+
     @app.route("/redirect302")
     def redirect302():
         return redirect("http://{}:8088/target".format(request.args['host']), code=302)
+
     @app.route("/redirect303", methods = ['POST'])
     def redirect303():
         return redirect("http://{}:8088/target".format(request.data.decode()), code=303)
+
     @app.route("/redirect307")
     def redirect307():
         return redirect("http://{}:8088/target".format(request.args['host']), code=307)
+
     def flaskThread():
-        app.run(host='0.0.0.0', port=8088)    
+        app.run(host='0.0.0.0', port=8088)
+
     th = Thread(target=flaskThread)
     th.start()
 
@@ -61,22 +71,27 @@ def setup_http_get(e):
         if func is None:
             raise RuntimeError('Not running with the Werkzeug Server')
         func()
+
     @app.route('/shutdown')
     def shutdown():
         shutdown_server()
         return 'Server shutting down...'
+
     @app.route("/")
     def root():
         return 'hello!!!'
+
     @app.route("/data")
     def get_data():
         size = int(request.args['size'])
         return 'a'*size
+
     def flaskThread():
         p = os.path.dirname(os.path.abspath(__file__))
-        context = (p + '/server.crt', p + '/server.key')
+        context = f'{p}/server.crt', f'{p}/server.key'
         print(context)
-        app.run(host='0.0.0.0', port=8088, ssl_context=context)    
+        app.run(host='0.0.0.0', port=8088, ssl_context=context)
+
     th = Thread(target=flaskThread)
     th.start()
 

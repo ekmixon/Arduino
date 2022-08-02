@@ -18,10 +18,10 @@ def merge_objects(versions, obj):
     for o in obj:
         name = o['name'].encode('ascii')
         ver = o['version'].encode('ascii')
-        if not name in versions:
+        if name not in versions:
             print("found new object, {0}".format(name), file=sys.stderr)
             versions[name] = {}
-        if not ver in versions[name]:
+        if ver not in versions[name]:
             print("found new version {0} for object {1}".format(ver, name), file=sys.stderr)
             versions[name][ver] = o
     return versions

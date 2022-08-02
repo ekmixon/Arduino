@@ -28,7 +28,7 @@ if which('ar') is None and not os.path.isfile('./ar') and not os.path.isfile('./
     raise Exception("You need the program 'ar' from xtensa-lx106-elf found here: (esp8266-arduino-core)/hardware/esp8266com/esp8266/tools/xtensa-lx106-elf/xtensa-lx106-elf/bin/ar")
 if which('openssl') is None and not os.path.isfile('./openssl') and not os.path.isfile('./openssl.exe'):
     raise Exception("You need to have openssl in PATH, installable from https://www.openssl.org/")
-    
+
 # Mozilla's URL for the CSV file with included PEM certs
 mozurl = "https://ccadb-public.secure.force.com/mozilla/IncludedCACertificateReportPEMCSV"
 
@@ -42,10 +42,11 @@ if sys.version_info[0] > 2:
 csvFile = StringIO(csvData)
 csvReader = csv.reader(csvFile)
 for row in csvReader:
-    names.append(row[0]+":"+row[1]+":"+row[2])
-    for item in row:
-        if item.startswith("'-----BEGIN CERTIFICATE-----"):
-            pems.append(item)
+    names.append(f"{row[0]}:{row[1]}:{row[2]}")
+    pems.extend(
+        item for item in row if item.startswith("'-----BEGIN CERTIFICATE-----")
+    )
+
 del names[0] # Remove headers
 del pems[0] # Remove headers
 
@@ -58,10 +59,10 @@ except Exception:
 derFiles = []
 idx = 0
 # Process the text PEM using openssl into DER files
-for i in range(0, len(pems)):
+for i in range(len(pems)):
     certName = "data/ca_%03d.der" % (idx);
     thisPem = pems[i].replace("'", "")
-    print(names[i] + " -> " + certName)
+    print(f"{names[i]} -> {certName}")
     ssl = Popen(['openssl','x509','-inform','PEM','-outform','DER','-out', certName], shell = False, stdin = PIPE)
     pipe = ssl.stdin
     pipe.write(thisPem.encode('utf-8'))

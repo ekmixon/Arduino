@@ -37,22 +37,22 @@ def windowsize_paths(l):
     out = []
     for i in l:
         if i.startswith('/'):
-            i = 'C:' + i
+            i = f'C:{i}'
         out += [i.replace('/', '\\')]
     return out
 
 def compile(tmp_dir, sketch, cache, tools_dir, hardware_dir, ide_path, f, args):
     cmd = []
-    cmd += [ide_path + '/arduino-builder']
+    cmd += [f'{ide_path}/arduino-builder']
     cmd += ['-compile', '-logger=human']
     cmd += ['-build-path', tmp_dir]
-    cmd += ['-tools', ide_path + '/tools-builder']
+    cmd += ['-tools', f'{ide_path}/tools-builder']
     if cache != "":
         cmd += ['-build-cache', cache ]
     if args.library_path:
         for lib_dir in args.library_path:
             cmd += ['-libraries', lib_dir]
-    cmd += ['-hardware', ide_path + '/hardware']
+    cmd += ['-hardware', f'{ide_path}/hardware']
     if args.hardware_dir:
         for hw_dir in args.hardware_dir:
             cmd += ['-hardware', hw_dir]
@@ -72,7 +72,7 @@ def compile(tmp_dir, sketch, cache, tools_dir, hardware_dir, ide_path, f, args):
     if args.waveform_phase:
         fqbn += ',waveform=phase'
     cmd += [fqbn]
-    cmd += ['-built-in-libraries', ide_path + '/libraries']
+    cmd += ['-built-in-libraries', f'{ide_path}/libraries']
     cmd += ['-ide-version=10607']
     cmd += ['-warnings={warnings}'.format(**vars(args))]
     if args.verbose:
@@ -130,10 +130,10 @@ def main():
     ide_path = args.ide_path
     if not ide_path:
         ide_path = os.environ.get('ARDUINO_IDE_PATH')
-        if not ide_path:
-            print("Please specify Arduino IDE path via --ide_path option"
-                  "or ARDUINO_IDE_PATH environment variable.", file=sys.stderr)
-            return 2
+    if not ide_path:
+        print("Please specify Arduino IDE path via --ide_path option"
+              "or ARDUINO_IDE_PATH environment variable.", file=sys.stderr)
+        return 2
 
     sketch_path = args.sketch_path
     tmp_dir = args.build_path
@@ -142,11 +142,11 @@ def main():
         tmp_dir = tempfile.mkdtemp()
         created_tmp_dir = True
 
-    tools_dir = os.path.dirname(os.path.realpath(__file__)) + '/../tools'
+    tools_dir = f'{os.path.dirname(os.path.realpath(__file__))}/../tools'
     # this is not the correct hardware folder to add.
-    hardware_dir = os.path.dirname(os.path.realpath(__file__)) + '/../cores'
+    hardware_dir = f'{os.path.dirname(os.path.realpath(__file__))}/../cores'
 
-    output_name = tmp_dir + '/' + os.path.basename(sketch_path) + '.bin'
+    output_name = f'{tmp_dir}/{os.path.basename(sketch_path)}.bin'
 
     if args.verbose:
         print("Sketch: ", sketch_path)
@@ -154,11 +154,7 @@ def main():
         print("Cache dir: ", args.build_cache)
         print("Output: ", output_name)
 
-    if args.verbose:
-        f = sys.stdout
-    else:
-        f = open(tmp_dir + '/build.log', 'w')
-
+    f = sys.stdout if args.verbose else open(f'{tmp_dir}/build.log', 'w')
     res = compile(tmp_dir, sketch_path, args.build_cache, tools_dir, hardware_dir, ide_path, f, args)
     if res != 0:
         return res

@@ -24,37 +24,36 @@ import subprocess
 import sys
 
 def get_segment_hints(iram):
-    hints = {}
-    hints['ICACHE'] = '          - flash instruction cache'
-    hints['IROM'] = '         - code in flash         (default or ICACHE_FLASH_ATTR)'
-    hints['IRAM'] = '  / ' + str(iram) + ' - code in IRAM          (IRAM_ATTR, ISRs...)'
-    hints['DATA'] = ')         - initialized variables (global, static) in RAM/HEAP'
-    hints['RODATA'] = ') / 81920 - constants             (global, static) in RAM/HEAP'
-    hints['BSS'] = ')         - zeroed variables      (global, static) in RAM/HEAP'
-    return hints
+    return {
+        'ICACHE': '          - flash instruction cache',
+        'IROM': '         - code in flash         (default or ICACHE_FLASH_ATTR)',
+        'IRAM': f'  / {str(iram)} - code in IRAM          (IRAM_ATTR, ISRs...)',
+        'DATA': ')         - initialized variables (global, static) in RAM/HEAP',
+        'RODATA': ') / 81920 - constants             (global, static) in RAM/HEAP',
+        'BSS': ')         - zeroed variables      (global, static) in RAM/HEAP',
+    }
 
 def get_segment_sizes(elf, path):
-    sizes = {}
-    sizes['ICACHE'] = 0
-    sizes['IROM'] = 0
-    sizes['IRAM'] = 0
-    sizes['DATA'] = 0
-    sizes['RODATA'] = 0
-    sizes['BSS'] = 0
-    p = subprocess.Popen([path + "/xtensa-lx106-elf-size", '-A', elf], stdout=subprocess.PIPE, universal_newlines=True )
+    sizes = {'ICACHE': 0, 'IROM': 0, 'IRAM': 0, 'DATA': 0, 'RODATA': 0, 'BSS': 0}
+    p = subprocess.Popen(
+        [f"{path}/xtensa-lx106-elf-size", '-A', elf],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
     lines = p.stdout.readlines()
     for line in lines:
         words = line.split()
         if line.startswith('.irom0.text'):
-            sizes['IROM'] = sizes['IROM'] + int(words[1])
+            sizes['IROM'] += int(words[1])
         elif line.startswith('.text'): # Gets .text and .text1
-            sizes['IRAM'] = sizes['IRAM'] + int(words[1])
+            sizes['IRAM'] += int(words[1])
         elif line.startswith('.data'): # Gets .text and .text1
-            sizes['DATA'] = sizes['DATA'] + int(words[1])
+            sizes['DATA'] += int(words[1])
         elif line.startswith('.rodata'): # Gets .text and .text1
-            sizes['RODATA'] = sizes['RODATA'] + int(words[1])
+            sizes['RODATA'] += int(words[1])
         elif line.startswith('.bss'): # Gets .text and .text1
-            sizes['BSS'] = sizes['BSS'] + int(words[1])
+            sizes['BSS'] += int(words[1])
     return sizes
 
 def get_mmu_sizes(mmu, sizes):
@@ -80,7 +79,7 @@ def main():
     [iram, sizes] = get_mmu_sizes(args.mmu, sizes)
     hints = get_segment_hints(iram)
 
-    sys.stderr.write("Executable segment sizes:" + os.linesep)
+    sys.stderr.write(f"Executable segment sizes:{os.linesep}")
     for k in sizes.keys():
         sys.stderr.write("%-7s: %-5d %s %s" % (k, sizes[k], hints[k], os.linesep))
 
